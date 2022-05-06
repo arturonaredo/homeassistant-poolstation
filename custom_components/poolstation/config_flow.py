@@ -5,7 +5,7 @@ from asyncio import TimeoutError
 import logging
 from typing import Any
 
-from aiohttp import ClientResponseError, DummyCookieJar
+from aiohttp import ClientResponseError, DummyCookieJar, CookieJar
 from pypoolstation import Account, AuthenticationException
 import voluptuous as vol
 
@@ -74,7 +74,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_abort(reason="reauth_successful")
 
     def _create_account(self, user_input):
-        session = async_create_clientsession(self.hass, cookie_jar=DummyCookieJar())
+        session = async_create_clientsession(self.hass, cookie_jar=CookieJar(unsafe=True))
         return Account(
             session, username=user_input[CONF_EMAIL], password=user_input[CONF_PASSWORD]
         )
@@ -82,7 +82,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def _attempt_login(self, user_input):
         errors: dict[str, str]
         errors = {}
-        account = self._create_account(self, user_input)
+        session = async_create_clientsession(self.hass, cookie_jar=CookieJar(unsafe=True))
+        account = Account(session, username=user_input[CONF_EMAIL], password=user_input[CONF_PASSWORD])
 
         try:
             token = await account.login()
